@@ -62,6 +62,14 @@ if ($event === 'order.paid' || $event === 'payment.captured') {
                 }
 
                 $db->commit();
+
+                // Dispatch order confirmation emails to customer and admin
+                try {
+                    require_once __DIR__ . '/../../config/mailer.php';
+                    sendOrderConfirmationEmails($order['id'], $razorpayPaymentId);
+                } catch (\Throwable $mErr) {
+                    error_log("Webhook order email error: " . $mErr->getMessage());
+                }
             } catch (Exception $e) {
                 $db->rollBack();
             }

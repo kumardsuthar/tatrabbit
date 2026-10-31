@@ -80,17 +80,9 @@ try {
 
     $db->commit();
 
-    // 3. Dispatch initial order confirmation email (non-blocking)
+    // 3. Dispatch detailed order confirmation emails to customer and admin
     try {
-        $emailSubject = "Order Confirmation #" . $order['id'] . " - TatRabbit";
-        $emailBody = "
-            <h2>Thank you for your order!</h2>
-            <p>Hi " . htmlspecialchars($order['shipping_name']) . ",</p>
-            <p>We have successfully received your payment of <strong>₹" . number_format($order['total_amount'], 2) . "</strong>.</p>
-            <p>Your order ID is <strong>#" . $order['id'] . "</strong>. Our studio fulfillment team is preparing your equipment for dispatch.</p>
-            <p>Track your shipment progress live anytime at: <a href='http://localhost:3000/track?order_id=" . $order['id'] . "&phone=" . urlencode($order['shipping_phone']) . "'>Track Order #" . $order['id'] . "</a></p>
-        ";
-        sendEmail($user['email'], $emailSubject, $emailBody);
+        sendOrderConfirmationEmails($order['id'], $razorpayPaymentId);
     } catch (\Throwable $mErr) {
         error_log("Order confirmation email non-fatal error: " . $mErr->getMessage());
     }
