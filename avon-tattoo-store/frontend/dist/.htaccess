@@ -1,0 +1,25 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+    # 1. Uploads routing & legacy redirects
+    # Maps /uploads/ requests directly to the real /api/uploads/ folder
+    RewriteRule ^uploads/(.*)$ api/uploads/$1 [END,NC]
+    RewriteRule ^tatrabbit/avon-tattoo-store/backend/uploads/(.*)$ api/uploads/$1 [R=301,L,NC]
+    RewriteRule ^backend/uploads/(.*)$ api/uploads/$1 [R=301,L,NC]
+
+    # 2. Existing files, directories, and assets
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 3. Pass all API requests to the PHP backend
+    RewriteRule ^api/(.*)$ api/$1 [L,QSA]
+
+  # 4. Route product & blog pages to /share.php for social sharing previews (WhatsApp, Facebook, Twitter, iMessage)
+  RewriteRule ^product/(?:id/)?([^/]+)/?$ /share.php?type=product&slug=$1 [L,QSA,NC]
+  RewriteRule ^blog/([^/]+)/?$ /share.php?type=blog&slug=$1 [L,QSA,NC]
+
+  # 5. All other routes to index.html for React SPA
+  RewriteRule ^ index.html [L]
+</IfModule>

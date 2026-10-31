@@ -1,0 +1,566 @@
+@import "slick-carousel/slick/slick.css";
+@import "slick-carousel/slick/slick-theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "calt";
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans font-normal antialiased leading-relaxed tracking-normal selection:bg-blue-600 selection:text-white;
+    font-optical-sizing: auto;
+  }
+
+  /* Heading Typography Scale & Weights */
+  h1 {
+    @apply font-heading text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 leading-tight;
+    font-optical-sizing: auto;
+  }
+
+  h2 {
+    @apply font-heading text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 leading-tight;
+    font-optical-sizing: auto;
+  }
+
+  h3 {
+    @apply font-heading text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 leading-snug;
+    font-optical-sizing: auto;
+  }
+
+  h4 {
+    @apply font-heading text-lg sm:text-xl font-semibold tracking-normal text-slate-900;
+    font-optical-sizing: auto;
+  }
+
+  h5 {
+    @apply font-heading text-base font-semibold text-slate-900;
+    font-optical-sizing: auto;
+  }
+
+  h6 {
+    @apply font-heading text-sm font-semibold text-slate-900;
+    font-optical-sizing: auto;
+  }
+
+  p {
+    @apply font-normal text-slate-600 leading-relaxed;
+  }
+
+  b,
+  strong {
+    @apply font-semibold text-slate-900;
+  }
+
+  small {
+    @apply font-medium text-xs text-slate-500;
+  }
+
+  label {
+    @apply font-medium text-slate-700 text-sm;
+  }
+
+  button {
+    @apply font-semibold;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply font-normal text-slate-900;
+    font-family: 'DM Sans', inherit;
+  }
+}
+
+/* Custom keyframes for Hero Slider & UI Animations */
+@keyframes slideFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(45px) scale(0.96);
+    filter: blur(4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes slideFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-45px) scale(0.96);
+    filter: blur(4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes img3dPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.82) rotate(-5deg) translateY(30px);
+    filter: blur(8px);
+  }
+
+  70% {
+    transform: scale(1.04) rotate(1deg) translateY(-4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes heroTimer {
+  0% {
+    width: 0%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes textRevealUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) skewY(2deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) skewY(0deg);
+  }
+}
+
+.animate-slide-right {
+  animation: slideFromRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-left {
+  animation: slideFromLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-img-3d {
+  animation: img3dPop 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-text-reveal {
+  animation: textRevealUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-timer-bar {
+  animation: heroTimer 6s linear infinite;
+}
+
+@keyframes floatSmooth {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+}
+
+.animate-float {
+  animation: floatSmooth 5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Custom scrollbar for light theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Custom Ultra Thin Scrollbar for Drawer Containers */
+.custom-thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+.custom-thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Festival Theme Specific Keyframes & Utilities */
+@keyframes festiveShimmer {
+  0% {
+    transform: translateX(-100%) rotate(15deg);
+  }
+
+  100% {
+    transform: translateX(200%) rotate(15deg);
+  }
+}
+
+@keyframes kiteSway {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(-6deg);
+  }
+
+  50% {
+    transform: translateY(-14px) rotate(8deg);
+  }
+}
+
+@keyframes diyaFlicker {
+
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+  }
+
+  50% {
+    transform: scale(1.08) translateY(-4px);
+    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.9));
+  }
+}
+
+@keyframes colorBurst {
+
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+
+  50% {
+    transform: scale(1.15) rotate(10deg);
+  }
+}
+
+.animate-festive-shimmer {
+  animation: festiveShimmer 4.5s ease-in-out infinite;
+}
+
+.animate-kite-sway {
+  animation: kiteSway 3.5s ease-in-out infinite;
+}
+
+.animate-diya-flicker {
+  animation: diyaFlicker 2.2s ease-in-out infinite;
+}
+
+.animate-color-burst {
+  animation: colorBurst 4.5s ease-in-out infinite;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Slick Slider Custom Styles */
+.slick-custom-wrapper .slick-dots {
+  bottom: -20px;
+}
+
+.slick-custom-wrapper .slick-dots li {
+  margin: 0 2px;
+}
+
+.slick-custom-wrapper .slick-dots li button:before {
+  font-size: 8px;
+  color: #94a3b8;
+  opacity: 0.6;
+}
+
+.slick-custom-wrapper .slick-dots li.slick-active button:before {
+  color: #2563eb;
+  opacity: 1;
+}
+
+.slick-custom-wrapper {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}
+
+.slick-custom-wrapper .slick-slider {
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.slick-custom-wrapper .slick-track {
+  display: flex !important;
+}
+
+.slick-custom-wrapper .slick-slide {
+  height: auto;
+  display: flex !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box;
+}
+
+.slick-custom-wrapper .slick-slide>div {
+  width: 100%;
+  display: flex;
+}
+
+/* =============================================
+   Quill Rich Text Content Styles (Product Page)
+   ============================================= */
+.quill-content h2 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0.75rem 0 0.35rem;
+  line-height: 1.4;
+}
+
+.quill-content h3 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0.6rem 0 0.3rem;
+}
+
+.quill-content p {
+  margin: 0 0 0.5rem;
+  color: #475569;
+  font-size: 0.8125rem;
+  line-height: 1.75;
+}
+
+.quill-content strong {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.quill-content em {
+  font-style: italic;
+}
+
+.quill-content u {
+  text-decoration: underline;
+}
+
+.quill-content ul,
+.quill-content ol {
+  padding-left: 1.25rem;
+  margin: 0.4rem 0 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.quill-content ul {
+  list-style-type: disc;
+}
+
+.quill-content ol {
+  list-style-type: decimal;
+}
+
+.quill-content li {
+  color: #475569;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.quill-content p:last-child {
+  margin-bottom: 0;
+}
+
+.quill-content br {
+  display: none;
+}
+
+/* Quill Snow editor overrides (admin panel) */
+.ql-container.ql-snow {
+  border: none !important;
+  font-size: 0.8125rem;
+}
+
+.ql-toolbar.ql-snow {
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #f8fafc;
+  padding: 6px 10px;
+}
+
+.ql-editor {
+  min-height: 140px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  color: #1e293b;
+  padding: 12px 16px;
+  line-height: 1.7;
+}
+
+.ql-editor.ql-blank::before {
+  color: #94a3b8;
+  font-style: normal;
+  font-size: 0.8rem;
+}
+
+/* Google Pay style Boom Ripple & Spring Animations */
+@keyframes gpayRipple {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(5.5);
+    opacity: 0;
+  }
+}
+
+.animate-gpay-ripple-1 {
+  animation: gpayRipple 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) 0.05s infinite;
+}
+
+.animate-gpay-ripple-2 {
+  animation: gpayRipple 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) 0.38s infinite;
+}
+
+.animate-gpay-ripple-3 {
+  animation: gpayRipple 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) 0.72s infinite;
+}
+
+@keyframes gpayBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) translateY(50px);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-8px);
+  }
+
+  80% {
+    transform: scale(0.96) translateY(3px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-gpay-bounce {
+  animation: gpayBounce 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes gpayCheckPop {
+  0% {
+    transform: scale(0) rotate(-25deg);
+  }
+
+  60% {
+    transform: scale(1.25) rotate(6deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-gpay-check-pop {
+  animation: gpayCheckPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+@keyframes gpayStroke {
+  0% {
+    stroke-dashoffset: 30;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-gpay-stroke {
+  stroke-dasharray: 30;
+  animation: gpayStroke 0.45s ease-out 0.35s both;
+}
