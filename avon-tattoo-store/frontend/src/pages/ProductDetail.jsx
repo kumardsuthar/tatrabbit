@@ -10,7 +10,6 @@ import { ProductCard } from '../components/cards/ProductCard';
 import { SEO } from '../components/common/SEO';
 import { ReviewMediaViewer, parseReviewImages } from '../components/common/ReviewMediaViewer';
 import { ReviewMediaUpload } from '../components/common/ReviewMediaUpload';
-import { OfferSuccessModal } from '../components/common/OfferSuccessModal';
 import api from '../services/api';
 import { cleanProductImageUrl } from '../utils/imageUrl';
 
@@ -50,28 +49,9 @@ export const ProductDetail = () => {
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState('');
   const [reviewErrorMsg, setReviewErrorMsg] = useState('');
 
-  // Coupon & Offer state
-  const [availableCoupons, setAvailableCoupons] = useState([]);
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponLoading, setCouponLoading] = useState(false);
-  const [couponError, setCouponError] = useState('');
-  const [showOfferCelebrationModal, setShowOfferCelebrationModal] = useState(false);
-
   useEffect(() => {
     fetchDetail();
   }, [targetParam]);
-
-  const fetchCouponsForProduct = async (productId) => {
-    try {
-      const res = await api.get(`/coupons/list-by-product.php?product_id=${productId}`);
-      if (res.data && Array.isArray(res.data.coupons)) {
-        setAvailableCoupons(res.data.coupons);
-      }
-    } catch (err) {
-      console.warn('Failed to load product coupons:', err);
-    }
-  };
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -81,12 +61,6 @@ export const ProductDetail = () => {
       setProduct(data);
       setSelectedVariant(null);
       setActiveImageIndex(0);
-      setAppliedCoupon(null);
-      setCouponInput('');
-      setCouponError('');
-      if (data && data.id) {
-        fetchCouponsForProduct(data.id);
-      }
     } catch (err) {
       console.error('Failed to load product detail:', err);
     } finally {
@@ -269,26 +243,6 @@ export const ProductDetail = () => {
     return isNaN(num) ? '0.00' : num.toLocaleString('en-IN', { minimumFractionDigits: 2 });
   };
 
-  // Recalculate coupon discount when variant changes - must be called before conditional returns
-  useEffect(() => {
-    if (appliedCoupon && appliedCoupon.coupon && product) {
-      const val = parseFloat(appliedCoupon.coupon.discount_value || 0);
-      let disc = 0;
-      if (appliedCoupon.coupon.type === 'percentage') {
-        disc = Math.round((currentPrice * val) / 100);
-      } else {
-        disc = Math.min(val, currentPrice);
-      }
-      const finalP = Math.max(0, currentPrice - disc);
-      setAppliedCoupon(prev => ({
-        ...prev,
-        original_price: currentPrice,
-        discount_amount: disc,
-        final_price: finalP
-      }));
-    }
-  }, [selectedVariant, currentPrice]);
-
   if (loading) {
     return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 font-semibold text-xs">Loading equipment specifications...</div>;
   }
@@ -318,48 +272,9 @@ export const ProductDetail = () => {
 
   const similarProducts = product.similar_products || [];
 
-  const handleApplyCoupon = async (codeToApply) => {
-    const trimmed = (codeToApply || couponInput || '').trim().toUpperCase();
-    if (!trimmed) {
-      setCouponError('Please enter a coupon code.');
-      return;
-    }
-
-    setCouponLoading(true);
-    setCouponError('');
-
-    try {
-      const res = await api.post('/coupons/validate.php', {
-        code: trimmed,
-        product_id: product.id,
-        price: currentPrice
-      });
-
-      if (res.data && res.data.status === 'success') {
-        setAppliedCoupon(res.data);
-        setCouponInput(trimmed);
-        setCouponError('');
-        setShowOfferCelebrationModal(true);
-      } else {
-        setCouponError(res.data.error || 'Failed to apply coupon.');
-      }
-    } catch (err) {
-      setCouponError(err.response?.data?.error || 'Invalid or expired coupon code.');
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponInput('');
-    setCouponError('');
-  };
-
   const handleAddToCart = () => {
     if (currentStock <= 0) return;
-    const finalPrice = appliedCoupon ? appliedCoupon.final_price : currentPrice;
-    addToCart(product, selectedVariant, quantity, finalPrice, appliedCoupon?.coupon || null);
+    addToCart(product, selectedVariant, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -512,19 +427,7 @@ export const ProductDetail = () => {
               {product.title}
             </h1>
             <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
-              {appliedCoupon ? (
-                <>
-                  <span className="text-emerald-600 font-heading font-bold text-xl sm:text-2xl tracking-tight">
-                    ₹{formatPrice(appliedCoupon.final_price)}
-                  </span>
-                  <span className="text-slate-400 font-heading font-medium text-xs sm:text-sm line-through">
-                    ₹{formatPrice(currentPrice)}
-                  </span>
-                  <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                    <Tag className="w-3 h-3 text-emerald-700" /> {appliedCoupon.discount_text || 'Offer'} ({appliedCoupon?.coupon?.code || couponInput})
-                  </span>
-                </>
-              ) : offerPrice !== null ? (
+              {offerPrice !== null ? (
                 <>
                   <span className="text-blue-600 font-heading font-semibold text-lg sm:text-xl tracking-tight">
                     ₹{formatPrice(offerPrice)}
@@ -577,92 +480,7 @@ export const ProductDetail = () => {
             </div>
           )}
 
-          {/* Studio Offers & Apply Coupon Box */}
-          <div className="border border-blue-100/90 bg-blue-50/40 rounded-2xl p-3.5 sm:p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-heading font-bold text-slate-900 flex items-center gap-1.5">
-                <Tag className="w-4 h-4 text-blue-600" /> Apply Studio Offer / Coupon
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">Instant Checkout Discount</span>
-            </div>
 
-            {/* Manual Coupon Input Field or Applied Banner */}
-            {!appliedCoupon ? (
-              <div className="space-y-1.5 pt-0.5">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="Enter Coupon Code"
-                      value={couponInput}
-                      onChange={(e) => {
-                        setCouponInput(e.target.value.toUpperCase());
-                        setCouponError('');
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleApplyCoupon(couponInput);
-                        }
-                      }}
-                      className="w-full text-xs font-mono font-semibold uppercase tracking-wider pl-3 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
-                    />
-                    {couponInput && (
-                      <button
-                        type="button"
-                        onClick={() => setCouponInput('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={couponLoading || !couponInput.trim()}
-                    onClick={() => handleApplyCoupon(couponInput)}
-                    className="text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-5 py-2.5 rounded-xl transition-all shadow-2xs shrink-0 flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {couponLoading ? (
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      'Apply'
-                    )}
-                  </button>
-                </div>
-
-                {couponError && (
-                  <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 pt-0.5">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{couponError}</span>
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between gap-2 animate-fadeIn">
-                <div className="flex items-center gap-2 min-w-0">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-emerald-900 truncate">
-                      Coupon <span className="font-mono">{appliedCoupon?.coupon?.code || couponInput}</span> Applied!
-                    </p>
-                    <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-                      You save ₹{formatPrice(appliedCoupon?.discount_amount)} ({appliedCoupon?.discount_text || ''})
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleRemoveCoupon}
-                  className="text-xs font-bold text-red-600 hover:text-red-700 bg-white border border-red-200 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors shadow-2xs shrink-0 cursor-pointer"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* Stock & Quantity Control */}
           <div className="flex items-center gap-3 pt-1">
@@ -1074,19 +892,7 @@ export const ProductDetail = () => {
         )}
       </Modal>
 
-      {/* ------------------------------------------------------------- */}
-      {/* GOOGLE PAY STYLE "BOOM" OFFER SUCCESS MODAL */}
-      {/* ------------------------------------------------------------- */}
-      <OfferSuccessModal
-        isOpen={showOfferCelebrationModal}
-        onClose={() => setShowOfferCelebrationModal(false)}
-        couponCode={appliedCoupon?.coupon?.code || couponInput}
-        discountAmount={appliedCoupon?.discount_amount || 0}
-        discountText={appliedCoupon?.discount_text || ''}
-        originalPrice={appliedCoupon?.original_price || currentPrice}
-        finalPrice={appliedCoupon?.final_price || currentPrice}
-        productTitle={product?.title || ''}
-      />
+
 
       {/* ------------------------------------------------------------- */}
       {/* SIMILAR PRODUCTS SECTION */}

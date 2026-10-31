@@ -8,11 +8,36 @@ export const CartProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [appliedCoupon, setAppliedCoupon] = useState(() => {
+    try {
+      const saved = localStorage.getItem('avon_applied_coupon');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   useEffect(() => {
     localStorage.setItem('avon_cart_items', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product, selectedVariant = null, quantity = 1, customPrice = null, appliedCoupon = null) => {
+  useEffect(() => {
+    if (appliedCoupon) {
+      localStorage.setItem('avon_applied_coupon', JSON.stringify(appliedCoupon));
+    } else {
+      localStorage.removeItem('avon_applied_coupon');
+    }
+  }, [appliedCoupon]);
+
+  // If cart becomes empty, remove coupon
+  useEffect(() => {
+    if (cartItems.length === 0 && appliedCoupon) {
+      setAppliedCoupon(null);
+      localStorage.removeItem('avon_applied_coupon');
+    }
+  }, [cartItems.length]);
+
+  const addToCart = (product, selectedVariant = null, quantity = 1, customPrice = null, appliedCouponParam = null) => {
     setCartItems(prev => {
       const variantId = selectedVariant ? selectedVariant.id : null;
       const existingIndex = prev.findIndex(
@@ -33,7 +58,6 @@ export const CartProvider = ({ children }) => {
         updated[existingIndex].quantity = Math.min(newQty, stock);
         if (customPrice !== null) {
           updated[existingIndex].unit_price = price;
-          updated[existingIndex].applied_coupon = appliedCoupon;
         }
         return updated;
       } else {
@@ -47,7 +71,6 @@ export const CartProvider = ({ children }) => {
             variant_name: variantName,
             unit_price: price,
             original_price: basePrice,
-            applied_coupon: appliedCoupon,
             quantity: Math.min(quantity, stock),
             stock: stock
           }
@@ -73,15 +96,27 @@ export const CartProvider = ({ children }) => {
     });
   };
 
+  const applyCoupon = (couponData) => {
+    setAppliedCoupon(couponData);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    localStorage.removeItem('avon_applied_coupon');
+  };
+
   const clearCart = () => {
     setCartItems([]);
+    setAppliedCoupon(null);
     localStorage.removeItem('avon_cart_items');
+    localStorage.removeItem('avon_applied_coupon');
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.unit_price * item.quantity, 0);
   const cartTotal = subtotal; // Backward compatible subtotal alias
+  const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount_amount || 0) : 0;
   const shippingFee = cartItems.length > 0 ? (subtotal < 5000 ? 100 : 0) : 0;
-  const finalTotal = subtotal + shippingFee;
+  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
@@ -95,7 +130,11 @@ export const CartProvider = ({ children }) => {
       subtotal,
       shippingFee,
       finalTotal,
-      totalItemCount
+      totalItemCount,
+      appliedCoupon,
+      discountAmount,
+      applyCoupon,
+      removeCoupon
     }}>
       {children}
     </CartContext.Provider>

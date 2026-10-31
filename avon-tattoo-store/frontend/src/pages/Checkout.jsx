@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   PackagePlus,
   Package,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Tag
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -29,6 +30,7 @@ import { orderService } from '../services/orderService';
 import { razorpayService } from '../services/razorpayService';
 import { OrderSummaryCard } from '../components/cards/OrderSummaryCard';
 import { AddProductModal } from '../components/modals/AddProductModal';
+import { OfferSuccessModal } from '../components/common/OfferSuccessModal';
 import { SEO } from '../components/common/SEO';
 import { cleanProductImageUrl } from '../utils/imageUrl';
 import api from '../services/api';
@@ -74,7 +76,16 @@ const INDIAN_STATES = [
 
 export const Checkout = () => {
   const { user, isAuthenticated } = useAuth();
-  const { cartItems, cartTotal, shippingFee, finalTotal: cartFinalTotal, clearCart } = useCart();
+  const { 
+    cartItems, 
+    cartTotal, 
+    shippingFee, 
+    finalTotal: cartFinalTotal, 
+    clearCart,
+    appliedCoupon,
+    applyCoupon,
+    removeCoupon
+  } = useCart();
   const finalTotal = cartFinalTotal !== undefined ? cartFinalTotal : (cartTotal + (shippingFee || 0));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -89,6 +100,12 @@ export const Checkout = () => {
   const [editExpired, setEditExpired] = useState(false);
   const [fetchingEditOrder, setFetchingEditOrder] = useState(Boolean(editOrderId));
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+
+  // Coupon States for Checkout
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [showOfferCelebrationModal, setShowOfferCelebrationModal] = useState(false);
 
   // Mobile scroll tracking
   const [isAtPlace, setIsAtPlace] = useState(false);
@@ -290,13 +307,58 @@ export const Checkout = () => {
     setErrorMessage('');
   };
 
+  // Coupon Handlers on Checkout
+  const handleApplyCoupon = async (codeToApply) => {
+    const trimmed = (codeToApply || couponInput || '').trim().toUpperCase();
+    if (!trimmed) {
+      setCouponError('Please enter a coupon code.');
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError('');
+
+    try {
+      const res = await api.post('/coupons/validate.php', {
+        code: trimmed,
+        subtotal: activeSubtotal,
+        items: activeItems
+      });
+
+      if (res.data && res.data.status === 'success') {
+        const disc = parseFloat(res.data.discount_amount || 0);
+        if (disc <= 0) {
+          setCouponError(res.data.error || 'This coupon code does not provide any discount on this order.');
+          return;
+        }
+        applyCoupon(res.data);
+        setCouponInput('');
+        setCouponError('');
+        setShowOfferCelebrationModal(true);
+      } else {
+        setCouponError(res.data.error || 'Failed to apply coupon.');
+      }
+    } catch (err) {
+      setCouponError(err.response?.data?.error || 'Invalid or expired coupon code.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    setCouponInput('');
+    setCouponError('');
+  };
+
   // Calculations for Edit Mode vs Normal Checkout
   const activeItems = isEditMode ? editItems : cartItems;
   const activeSubtotal = isEditMode 
     ? editItems.reduce((acc, it) => acc + (parseFloat(it.unit_price || 0) * it.quantity), 0)
     : cartTotal;
+  const discountAmount = (!isEditMode && appliedCoupon) ? parseFloat(appliedCoupon.discount_amount || 0) : 0;
   const activeShippingFee = activeItems.length > 0 ? (activeSubtotal < 5000 ? 100 : 0) : 0;
-  const activeNewTotal = Math.round((activeSubtotal + activeShippingFee) * 100) / 100;
+  const activeNewTotal = Math.max(0, Math.round((activeSubtotal - discountAmount + activeShippingFee) * 100) / 100);
 
   // "if more price then only show that into the payment checkout page edit order"
   const additionalPrice = isEditMode 
@@ -308,7 +370,7 @@ export const Checkout = () => {
     ? Math.max(0, Math.round((originalPaid - activeNewTotal) * 100) / 100)
     : 0;
 
-  const totalPayableDisplay = isEditMode ? additionalPrice : finalTotal;
+  const totalPayableDisplay = isEditMode ? additionalPrice : activeNewTotal;
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
@@ -448,7 +510,7 @@ export const Checkout = () => {
         shipping_name: shippingName.trim(),
         shipping_phone: shippingPhone.trim(),
         shipping_address: formattedAddress
-      });
+      }, appliedCoupon?.coupon?.code || null);
 
       const { order_id, razorpay_order_id, amount_paise, key_id } = orderData;
 
@@ -666,14 +728,9 @@ export const Checkout = () => {
                               </span>
                             )}
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              <span className={`text-[11px] font-semibold ${item.applied_coupon ? 'text-emerald-600 font-bold' : 'text-slate-600'}`}>
+                              <span className="text-[11px] font-semibold text-slate-600">
                                 ₹{item.unit_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })} each
                               </span>
-                              {item.applied_coupon && (
-                                <span className="text-[9px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
-                                  {item.applied_coupon.code}
-                                </span>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -932,6 +989,15 @@ export const Checkout = () => {
               isEditMode={isEditMode}
               originalPaid={originalPaid}
               additionalPrice={additionalPrice}
+              appliedCoupon={appliedCoupon}
+              discountAmount={discountAmount}
+              couponInput={couponInput}
+              setCouponInput={setCouponInput}
+              couponLoading={couponLoading}
+              couponError={couponError}
+              setCouponError={setCouponError}
+              onApplyCoupon={handleApplyCoupon}
+              onRemoveCoupon={handleRemoveCoupon}
             >
               <div ref={staticButtonRef} className="pt-2">
                 <button
@@ -993,7 +1059,7 @@ export const Checkout = () => {
                 }`}>
                   {isEditMode 
                     ? (additionalPrice > 0 ? 'Difference' : (excessRefund > 0 ? `₹${excessRefund} Refund Due` : 'Fully Covered'))
-                    : (shippingFee === 0 ? 'Free Delivery' : '+₹100')}
+                    : (appliedCoupon && discountAmount > 0 ? `Saved ₹${discountAmount}` : (shippingFee === 0 ? 'Free Delivery' : '+₹100'))}
                 </span>
               </div>
             </div>
@@ -1042,6 +1108,18 @@ export const Checkout = () => {
         onClose={() => setIsAddProductOpen(false)}
         onAddProduct={handleAddProductToEdit}
         existingItems={editItems}
+      />
+
+      {/* Offer Celebration Modal on Coupon Apply */}
+      <OfferSuccessModal
+        isOpen={showOfferCelebrationModal}
+        onClose={() => setShowOfferCelebrationModal(false)}
+        couponCode={appliedCoupon?.coupon?.code || couponInput}
+        discountAmount={discountAmount}
+        discountText={appliedCoupon?.discount_text || ''}
+        originalPrice={activeSubtotal}
+        finalPrice={activeNewTotal}
+        productTitle="Order Discount"
       />
     </div>
   );

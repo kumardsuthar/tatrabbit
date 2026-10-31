@@ -1,13 +1,73 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, Image as ImageIcon, Tag, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Button } from '../components/common/Button';
 import { cleanProductImageUrl } from '../utils/imageUrl';
+import api from '../services/api';
 
 export const Cart = () => {
-  const { cartItems, updateQuantity, removeFromCart, clearCart, cartTotal, shippingFee, finalTotal } = useCart();
+  const { 
+    cartItems, 
+    updateQuantity, 
+    removeFromCart, 
+    clearCart, 
+    cartTotal, 
+    shippingFee, 
+    finalTotal,
+    appliedCoupon,
+    discountAmount,
+    applyCoupon,
+    removeCoupon
+  } = useCart();
+
   const navigate = useNavigate();
+
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
+  const handleApplyCoupon = async () => {
+    const trimmed = (couponInput || '').trim().toUpperCase();
+    if (!trimmed) {
+      setCouponError('Please enter a coupon code.');
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError('');
+
+    try {
+      const res = await api.post('/coupons/validate.php', {
+        code: trimmed,
+        subtotal: cartTotal,
+        items: cartItems
+      });
+
+      if (res.data && res.data.status === 'success') {
+        const disc = parseFloat(res.data.discount_amount || 0);
+        if (disc <= 0) {
+          setCouponError(res.data.error || 'This coupon code does not provide any discount on this order.');
+          return;
+        }
+        applyCoupon(res.data);
+        setCouponInput('');
+        setCouponError('');
+      } else {
+        setCouponError(res.data.error || 'Failed to apply coupon.');
+      }
+    } catch (err) {
+      setCouponError(err.response?.data?.error || 'Invalid or expired coupon code.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    setCouponInput('');
+    setCouponError('');
+  };
 
   if (cartItems.length === 0) {
     return (
@@ -72,17 +132,12 @@ export const Cart = () => {
                     <p className="text-[11px] text-blue-600 font-semibold mt-0.5">{item.variant_name}</p>
                   )}
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className={`text-xs font-semibold ${item.applied_coupon ? 'text-emerald-600 font-bold' : 'text-slate-500'}`}>
+                    <span className="text-xs font-semibold text-slate-700">
                       ₹{item.unit_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                     {item.original_price && item.original_price > item.unit_price && (
                       <span className="text-[10px] text-slate-400 line-through">
                         ₹{item.original_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    )}
-                    {item.applied_coupon && (
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded font-mono">
-                        {item.applied_coupon.code}
                       </span>
                     )}
                   </div>
@@ -125,7 +180,7 @@ export const Cart = () => {
         </div>
 
         {/* Order Summary & Proceed Box */}
-        <div className="bg-white border border-slate-200 rounded-[2rem] p-6 space-y-5 sticky top-28 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-[2rem] p-6 space-y-4 sticky top-28 shadow-xs">
           <h3 className="font-heading font-semibold text-sm text-slate-900 border-b border-slate-100 pb-3">
             Cart Summary
           </h3>
@@ -147,11 +202,130 @@ export const Cart = () => {
             </div>
           )}
 
-          <div className="space-y-2.5 text-xs text-slate-600">
+          {/* Coupon Input & Apply Box on Cart Page */}
+          <div className="border border-blue-100/90 bg-blue-50/40 rounded-2xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-heading font-bold text-slate-900 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-blue-600" /> Apply Coupon
+              </span>
+              {appliedCoupon ? (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Applied
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-400 font-medium">Have a code?</span>
+              )}
+            </div>
+
+            {!appliedCoupon ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Enter Coupon Code"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        if (couponError) setCouponError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleApplyCoupon();
+                        }
+                      }}
+                      className="w-full text-xs font-mono font-semibold uppercase tracking-wider pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
+                    />
+                    {couponInput && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCouponInput('');
+                          if (couponError) setCouponError('');
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={couponLoading || !couponInput.trim()}
+                    onClick={handleApplyCoupon}
+                    className="text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-4 py-2 rounded-xl transition-all shadow-2xs shrink-0 flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {couponLoading ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      'Apply'
+                    )}
+                  </button>
+                </div>
+
+                {couponError && (
+                  <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 pt-0.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{couponError}</span>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center justify-between gap-2 animate-fadeIn">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-emerald-900 truncate">
+                      Coupon <span className="font-mono">{appliedCoupon.coupon?.code || 'Applied'}</span> Applied!
+                    </p>
+                    <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                      You save ₹{parseFloat(discountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({appliedCoupon.discount_text || ''})
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-white border border-rose-200 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors shadow-2xs shrink-0 cursor-pointer"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
             <div className="flex justify-between">
               <span>Items Subtotal</span>
               <span className="text-slate-900 font-semibold">₹{cartTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
+
+            {/* Applied Coupon Discount Row */}
+            {appliedCoupon && discountAmount > 0 && (
+              <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1.5 rounded-xl font-medium">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Tag className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Coupon Discount</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-bold text-xs">
+                    -₹{parseFloat(discountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-[10px] text-rose-600 hover:text-rose-800 font-bold bg-white px-1.5 py-0.5 rounded border border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Remove Coupon"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center">
               <div>
                 <span>Express Courier Delivery</span>
@@ -163,7 +337,7 @@ export const Cart = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-4 flex justify-between items-baseline">
+          <div className="border-t border-slate-100 pt-3 flex justify-between items-baseline">
             <div>
               <span className="text-xs font-semibold text-slate-900 block">Total Payable</span>
               <span className="text-[10px] text-slate-400">Includes all GST & shipping</span>
@@ -175,7 +349,7 @@ export const Cart = () => {
 
           <button
             onClick={() => navigate('/checkout')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-3.5 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-3.5 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             Proceed to Secure Checkout <ArrowRight className="w-4 h-4" />
           </button>
