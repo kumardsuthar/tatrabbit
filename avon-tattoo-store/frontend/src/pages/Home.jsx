@@ -53,6 +53,28 @@ const TrendingPrevArrow = ({ onClick }) => (
   </button>
 );
 
+const ReviewNextArrow = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="hidden sm:flex absolute -right-3 sm:-right-10 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white text-slate-700 shadow-md hover:shadow-xl hover:bg-blue-600 hover:text-white items-center justify-center transition-all z-20 border border-slate-200/90 focus:outline-none cursor-pointer"
+    aria-label="Next Review"
+  >
+    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+  </button>
+);
+
+const ReviewPrevArrow = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="hidden sm:flex absolute -left-3 sm:-left-10 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white text-slate-700 shadow-md hover:shadow-xl hover:bg-blue-600 hover:text-white items-center justify-center transition-all z-20 border border-slate-200/90 focus:outline-none cursor-pointer"
+    aria-label="Previous Review"
+  >
+    <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+  </button>
+);
+
 export const Home = () => {
   const navigate = useNavigate();
   let festival = null;
@@ -767,7 +789,51 @@ export const Home = () => {
         );
 
       case 'reviews': {
-        const displayedReviews = reviewsList.slice(0, 6);
+        const isMobileReview = windowWidth < 640;
+        const isTabletReview = windowWidth >= 640 && windowWidth < 1024;
+        const reviewSlidesToShow = isMobileReview ? 1 : isTabletReview ? 2 : 3;
+        const currentReviewSlidesToShow = Math.min(reviewsList.length, reviewSlidesToShow) || 1;
+        const canReviewSlide = reviewsList.length > currentReviewSlidesToShow;
+
+        const reviewSlickSettings = {
+          dots: isMobileReview && canReviewSlide,
+          arrows: !isMobileReview && canReviewSlide,
+          infinite: canReviewSlide,
+          speed: 400,
+          autoplay: canReviewSlide,
+          autoplaySpeed: 5000,
+          pauseOnHover: true,
+          slidesToShow: currentReviewSlidesToShow,
+          slidesToScroll: 1,
+          swipeToSlide: true,
+          swipe: canReviewSlide,
+          touchThreshold: 15,
+          nextArrow: <ReviewNextArrow />,
+          prevArrow: <ReviewPrevArrow />,
+          responsive: [
+            {
+              breakpoint: 1024,
+              settings: {
+                slidesToShow: Math.min(reviewsList.length, 2) || 1,
+                slidesToScroll: 1,
+                arrows: reviewsList.length > 2,
+                dots: false,
+                infinite: reviewsList.length > 2,
+              }
+            },
+            {
+              breakpoint: 640,
+              settings: {
+                slidesToShow: 1,
+                slidesToScroll: 1,
+                arrows: false,
+                dots: reviewsList.length > 1,
+                infinite: reviewsList.length > 1,
+              }
+            }
+          ]
+        };
+
         return (
           <section key="reviews" id="reviews" className="space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -801,10 +867,17 @@ export const Home = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  {displayedReviews.map((rev, i) => (
-                    <ReviewCard key={i} review={rev} />
-                  ))}
+                <div className="px-2 sm:px-12 relative pb-6 sm:pb-1 slick-custom-wrapper">
+                  <Slider
+                    key={`reviews-slider-${isMobileReview ? 'mobile' : isTabletReview ? 'tablet' : 'desktop'}-${reviewsList.length}`}
+                    {...reviewSlickSettings}
+                  >
+                    {reviewsList.map((rev, i) => (
+                      <div key={rev.id || i} className="px-1.5 sm:px-2.5 py-2 h-full flex flex-col">
+                        <ReviewCard review={rev} />
+                      </div>
+                    ))}
+                  </Slider>
                 </div>
 
                 <div className="flex justify-center pt-2">

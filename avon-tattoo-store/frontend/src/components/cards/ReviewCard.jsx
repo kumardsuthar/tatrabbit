@@ -14,7 +14,7 @@ export const ReviewCard = ({ review }) => {
   const verified = true;
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-[1.8rem] p-5 sm:p-6 transition-all space-y-3 flex flex-col justify-between hover:shadow-md hover:border-slate-300/80">
+    <div className="w-full h-full bg-white border border-slate-200/90 rounded-[1.8rem] p-5 sm:p-6 transition-all space-y-3 flex flex-col justify-between hover:shadow-md hover:border-slate-300/80">
       <div className="space-y-3">
         {/* Top Header: Reviewer Info (Left) & Badge + Date (Right) */}
         <div className="flex items-start justify-between gap-3">
