@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShieldCheck, ShoppingBag, Check, HelpCircle, ChevronDown, ChevronUp, ArrowLeft, Heart, ChevronLeft, ChevronRight, Star, MessageSquareQuote, Plus, CheckCircle2, UserCheck, Sparkles, Layers, ZoomIn, ZoomOut, RotateCcw, X, Image as ImageIcon, Tag, AlertCircle, Percent } from 'lucide-react';
+import { ShieldCheck, ShoppingBag, Check, HelpCircle, ChevronDown, ChevronUp, ArrowLeft, Heart, ChevronLeft, ChevronRight, Star, MessageSquareQuote, Plus, CheckCircle2, UserCheck, Sparkles, Layers, ZoomIn, ZoomOut, RotateCcw, X, Image as ImageIcon, Tag, AlertCircle, Percent, Zap } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { Button } from '../components/common/Button';
@@ -279,6 +279,12 @@ export const ProductDetail = () => {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const handleBuyNow = () => {
+    if (currentStock <= 0) return;
+    addToCart(product, selectedVariant, quantity);
+    navigate('/checkout');
+  };
+
   const getVariantTitleLabel = () => {
     if (product?.variant_title && product.variant_title.trim() !== '') {
       const trimmed = product.variant_title.trim();
@@ -506,31 +512,47 @@ export const ProductDetail = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 pt-1">
-            <button
-              onClick={handleAddToCart}
-              disabled={currentStock <= 0}
-              className={`flex-1 text-xs font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs ${added
-                  ? 'bg-emerald-600 text-white'
-                  : currentStock <= 0
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
+            <div className="flex items-center gap-2 flex-1">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={currentStock <= 0}
+                className={`flex-1 text-xs font-semibold py-2.5 px-3 sm:px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs ${added
+                    ? 'bg-emerald-600 text-white'
+                    : currentStock <= 0
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 shadow-2xs'
+                  }`}
+              >
+                {added ? (
+                  <>
+                    <Check className="w-4 h-4" /> Added to Studio Cart
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-4 h-4" /> Add to Studio Cart
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                disabled={currentStock <= 0}
+                className={`flex-1 text-xs font-semibold py-2.5 px-3 sm:px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs ${currentStock <= 0
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-                }`}
-            >
-              {added ? (
-                <>
-                  <Check className="w-4 h-4" /> Added to Studio Cart
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="w-4 h-4" /> Add to Studio Cart
-                </>
-              )}
-            </button>
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 active:scale-[0.99]'
+                  }`}
+              >
+                <Zap className="w-4 h-4 fill-amber-300 text-amber-300" /> Buy Now
+              </button>
+            </div>
 
             <button
+              type="button"
               onClick={() => toggleWishlist(product)}
-              className={`p-2.5 rounded-xl border transition-all flex items-center justify-center ${isWishlisted(product.id)
+              className={`p-2.5 rounded-xl border transition-all flex items-center justify-center self-center sm:self-auto ${isWishlisted(product.id)
                   ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
                   : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50'
                 }`}
